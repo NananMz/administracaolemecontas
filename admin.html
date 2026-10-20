@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Caderneta — Administração</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1f2328;--mut:#6b6f76;--line:#e3dfd6;--acc:#1f6f5c;--accs:#e3f1ec;--warn:#b4472b;--warns:#fbe9e3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171a;--card:#1e2125;--ink:#ecebe7;--mut:#9aa0a6;--line:#2e3237;--acc:#5cc3a4;--accs:#1d3530;--warn:#ef8a6f;--warns:#3a2420}}
+:root[data-theme="dark"]{--bg:#15171a;--card:#1e2125;--ink:#ecebe7;--mut:#9aa0a6;--line:#2e3237;--acc:#5cc3a4;--accs:#1d3530;--warn:#ef8a6f;--warns:#3a2420}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:18px 16px 0;max-width:720px;margin:auto}
+h1{font-size:22px;margin:0 0 12px}
+nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+nav button{flex:1;min-width:max-content;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 12px;border-radius:10px;font:inherit;font-size:14px;cursor:pointer}
+nav button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+main{max-width:720px;margin:auto;padding:14px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 4px}
+input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
+.row{display:flex;gap:8px;align-items:end}.row>*{flex:1}.row .q{flex:0 0 80px}
+.btn{border:0;background:var(--acc);color:#fff;padding:11px 14px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}
+.btn.sec{background:var(--accs);color:var(--acc)}.btn.del{background:transparent;color:var(--warn);padding:6px 8px}
+.btn:disabled{opacity:.5}
+.it{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);gap:8px}
+.it:last-child{border:0}
+.tot{font-size:20px;font-weight:700;text-align:right;margin:10px 0}
+.mut{color:var(--mut);font-size:13px}
+.cli{font-weight:700;font-size:17px}
+.badge{background:var(--warns);color:var(--warn);border-radius:20px;padding:3px 10px;font-weight:700;font-size:14px;white-space:nowrap}
+.badge.ok{background:var(--accs);color:var(--acc)}
+.conta{padding:10px 0;border-top:1px dashed var(--line)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.st{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}.st b{display:block;font-size:18px}.st span{font-size:12px;color:var(--mut)}@media(max-width:420px){.st b{font-size:15px}}
+.msg{text-align:center;color:var(--mut);padding:30px 0}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9px;display:none}
+</style>
+</head><body>
+<header><h1>📊 Caderneta — Administração</h1>
+<div class="stats" id="stats"></div><input id="busca" placeholder="🔍 Buscar cliente" style="margin-bottom:10px"><nav><button data-t="devendo" class="on">Devendo</button><button data-t="pagos">Pagos</button></nav></header>
+<main id="app"><div class="msg">Carregando…</div></main>
+<div id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCCIurNw6ZI4eYCPLxfZK0TXIfhQKJxCRU",
+  authDomain: "leme1adm.firebaseapp.com",
+  projectId: "leme1adm",
+  storageBucket: "leme1adm.firebasestorage.app",
+  messagingSenderId: "938106754737",
+  appId: "1:938106754737:web:119b8e5407648b4b963490"
+};
+</script>
+<script>
+const brl=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dt=ms=>new Date(ms).toLocaleDateString('pt-BR');
+let tab='devendo',busca='',db=null,produtos=[],contas=[],carrinho=[],cliente='';
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2200)}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));render()});
+const total=c=>c.itens.reduce((s,i)=>s+i.qtd*i.preco,0);
+
+function stats(){
+ const dev=contas.filter(c=>!c.pago),m=new Date();
+ const mes=contas.filter(c=>c.pago&&c.pagoEm&&new Date(c.pagoEm).getMonth()===m.getMonth()&&new Date(c.pagoEm).getFullYear()===m.getFullYear());
+ document.getElementById('stats').innerHTML=`<div class="st"><span>A receber</span><b style="color:var(--warn)">${brl(dev.reduce((s,c)=>s+total(c),0))}</b></div><div class="st"><span>Clientes devendo</span><b>${new Set(dev.map(c=>c.cliente)).size}</b></div><div class="st"><span>Recebido no mês</span><b style="color:var(--acc)">${brl(mes.reduce((s,c)=>s+total(c),0))}</b></div>`;
+}
+document.getElementById('busca').oninput=e=>{busca=e.target.value.toLowerCase().trim();render()};
+function render(){
+ const a=document.getElementById('app');
+ if(!db){a.innerHTML='<div class="msg">Não foi possível conectar ao banco de dados. Confira a configuração do Firebase no arquivo.</div>';return}
+{
+  const pago=tab==='pagos';const lista=contas.filter(c=>!!c.pago===pago&&c.cliente.toLowerCase().includes(busca));
+  if(!lista.length){a.innerHTML=`<div class="msg">${pago?'Nenhuma conta paga ainda.':'Ninguém devendo 🎉'}</div>`;return}
+  const grupos={};lista.forEach(c=>(grupos[c.cliente]??=[]).push(c));
+  const ord=Object.entries(grupos).sort((x,y)=>pago?0:x[0].localeCompare(y[0]));
+  const geral=lista.reduce((s,c)=>s+total(c),0);
+  a.innerHTML=(pago?'':`<div class="card" style="display:flex;justify-content:space-between;align-items:center"><span>Total a receber</span><span class="badge">${brl(geral)}</span></div>`)+ord.map(([n,cs])=>`<div class="card"><div class="it" style="border:0;padding-top:0"><span class="cli">${esc(n)}</span><span class="badge ${pago?'ok':''}">${brl(cs.reduce((s,c)=>s+total(c),0))}</span></div>
+  ${cs.sort((x,y)=>y.data-x.data).map(c=>`<div class="conta"><div>${c.itens.map(i=>`${i.qtd}× ${esc(i.nome)} (${brl(i.preco)})`).join(', ')}</div><div class="it" style="border:0;padding-bottom:0"><span class="mut">${dt(c.data)}${pago&&c.pagoEm?' · pago em '+dt(c.pagoEm):''} · Total: <b>${brl(total(c))}</b></span>${pago?`<button class="btn del" data-u="${c.id}">Desfazer</button>`:`<button class="btn" data-p="${c.id}">Marcar pago</button>`}</div></div>`).join('')}
+  ${!pago&&cs.length>1?`<button class="btn sec" data-all="${esc(n)}" style="width:100%;margin-top:8px">Marcar tudo de ${esc(n)} como pago</button>`:''}</div>`).join('');
+  a.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await db.doc('contas/'+b.dataset.p).update({pago:true,pagoEm:Date.now()})}catch(e){b.disabled=false;toast('Sem permissão para alterar')}});
+  a.querySelectorAll('[data-u]').forEach(b=>b.onclick=async()=>{if(confirm('Voltar para devendo?'))await db.doc('contas/'+b.dataset.u).update({pago:false,pagoEm:null})});
+  a.querySelectorAll('[data-all]').forEach(b=>b.onclick=async()=>{if(!confirm('Marcar todas as contas de '+b.dataset.all+' como pagas?'))return;b.disabled=true;for(const c of grupos[b.dataset.all])await db.doc('contas/'+c.id).update({pago:true,pagoEm:Date.now()})});
+ }
+}
+(async()=>{
+ try{firebase.initializeApp(firebaseConfig);db=firebase.firestore()}catch(e){db=null}
+ if(!db){render();return}
+ db.collection('contas').onSnapshot(s=>{contas=s.docs.map(d=>({id:d.id,...d.data()}));stats();render()},()=>{});
+ render();
+})();
+</script>
+
+</body></html>
