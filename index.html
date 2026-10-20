@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Caderneta — Painel</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1d2433;--mut:#6b7385;--line:#e2e5eb;--pri:#2a5bd7;--pris:#e8eefc;--ok:#1e8a5a;--oks:#e4f4ec;--bad:#c9372c;--bads:#fbe8e6;--side:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#121418;--card:#1b1e24;--ink:#e7e9ee;--mut:#9aa1b0;--line:#2b2f37;--pri:#6f95f2;--pris:#1f2a44;--ok:#4cc38a;--oks:#173226;--bad:#ef7b70;--bads:#3a1f1d;--side:#171a1f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.layout{display:flex;min-height:100vh}
+aside{width:230px;background:var(--side);border-right:1px solid var(--line);padding:18px 12px;position:sticky;top:0;height:100vh;flex-shrink:0}
+.brand{font-weight:800;font-size:17px;padding:4px 10px 18px}
+.brand small{display:block;font-weight:500;color:var(--mut);font-size:12px}
+.menu a{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:8px;color:var(--ink);text-decoration:none;cursor:pointer;margin-bottom:2px}
+.menu a:hover{background:var(--bg)}
+.menu a.on{background:var(--pris);color:var(--pri);font-weight:600}
+main{flex:1;min-width:0;padding:24px 28px 90px;max-width:1000px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+h1{font-size:22px;margin:0}
+.back{color:var(--pri);cursor:pointer;font-size:14px;margin-bottom:6px;display:inline-block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+.card h2{font-size:16px;margin:0 0 4px}.card p.sub{margin:0 0 14px;color:var(--mut);font-size:13px}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 5px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit}
+input:focus,select:focus{outline:2px solid var(--pris);border-color:var(--pri)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pfx{position:relative}.pfx span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--mut)}.pfx input{padding-left:36px}
+.btn{border:0;background:var(--pri);color:#fff;padding:10px 16px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn.sec{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn.link{background:none;color:var(--bad);padding:6px}
+.btn:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.03em;padding:10px 12px;border-bottom:1px solid var(--line)}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr.cl{cursor:pointer}tbody tr.cl:hover{background:var(--bg)}
+.thumb{width:38px;height:38px;border-radius:8px;background:var(--pris);color:var(--pri);display:grid;place-items:center;font-weight:700;flex-shrink:0}
+.pn{display:flex;gap:10px;align-items:center}
+.mut{color:var(--mut);font-size:13px}
+.tag{font-size:12px;padding:2px 8px;border-radius:20px;background:var(--bg);color:var(--mut)}
+.tag.dev{background:var(--bads);color:var(--bad)}.tag.ok{background:var(--oks);color:var(--ok)}
+.tablewrap{padding:0;overflow:hidden}
+.toolbar{padding:12px;border-bottom:1px solid var(--line)}
+.empty{text-align:center;padding:40px 16px;color:var(--mut)}
+.qty{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.qty button{border:0;background:var(--bg);color:var(--ink);width:32px;height:32px;font-size:17px;cursor:pointer}
+.qty span{min-width:34px;text-align:center;font-weight:600}
+.sug{border:1px solid var(--line);border-radius:8px;margin-top:4px;max-height:240px;overflow:auto;background:var(--card)}
+.sug div{padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;border-bottom:1px solid var(--line)}
+.sug div:last-child{border:0}.sug div:hover{background:var(--pris)}
+.sum{display:flex;justify-content:space-between;align-items:center;font-size:20px;font-weight:800;padding-top:14px;margin-top:6px;border-top:1px solid var(--line)}
+.bar{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;padding:12px 0}
+#toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;display:none;z-index:9}
+.hidem{}
+@media(max-width:760px){
+ aside{position:fixed;bottom:0;top:auto;left:0;right:0;width:auto;height:auto;padding:6px;border-right:0;border-top:1px solid var(--line);z-index:5}
+ .brand{display:none}.menu{display:flex}.menu a{flex:1;flex-direction:column;gap:2px;font-size:12px;padding:8px 4px;text-align:center}
+ main{padding:18px 16px 100px}.grid2{grid-template-columns:1fr}.hidem{display:none}
+ td,th{padding:10px 8px}
+}
+</style></head><body>
+<div class="layout">
+<aside><div class="brand">📒 Caderneta<small>Painel do atendente</small></div>
+<nav class="menu">
+<a data-v="anotar"><span>🧾</span>Nova anotação</a>
+<a data-v="produtos"><span>📦</span>Produtos</a>
+<a data-v="recentes"><span>🕘</span>Anotações</a>
+</nav></aside>
+<main id="app"><div class="empty">Carregando…</div></main>
+</div>
+<div id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCCIurNw6ZI4eYCPLxfZK0TXIfhQKJxCRU",
+  authDomain: "leme1adm.firebaseapp.com",
+  projectId: "leme1adm",
+  storageBucket: "leme1adm.firebasestorage.app",
+  messagingSenderId: "938106754737",
+  appId: "1:938106754737:web:119b8e5407648b4b963490"
+};
+</script>
+<script>
+const brl=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dt=ms=>new Date(ms).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+const num=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'));
+const $=id=>document.getElementById(id);
+function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2300)}
+let db=null,produtos=[],contas=[],view='anotar',editId=null,carrinho=[],cliente='',filtroP='';
+const total=c=>c.itens.reduce((s,i)=>s+i.qtd*i.preco,0);
+
+document.querySelectorAll('.menu a').forEach(a=>a.onclick=()=>go(a.dataset.v));
+function go(v,id){view=v;editId=id||null;document.querySelectorAll('.menu a').forEach(a=>a.classList.toggle('on',a.dataset.v===(v==='form'?'produtos':v)));render();scrollTo(0,0)}
+
+function render(){
+ const a=$('app');
+ if(!db){a.innerHTML='<div class="empty">Não foi possível conectar ao banco. Confira a configuração do Firebase.</div>';return}
+ ({anotar:vAnotar,produtos:vProdutos,form:vForm,recentes:vRecentes})[view](a);
+}
+
+/* ---------- PRODUTOS ---------- */
+function vProdutos(a){
+ const f=filtroP.toLowerCase();
+ const l=produtos.filter(p=>(p.nome+' '+(p.codigo||'')+' '+(p.categoria||'')).toLowerCase().includes(f));
+ a.innerHTML=`<div class="top"><h1>Produtos</h1><button class="btn" id="novo">+ Adicionar produto</button></div>
+ <div class="card tablewrap"><div class="toolbar"><input id="fp" placeholder="🔍 Buscar por nome, código ou categoria" value="${esc(filtroP)}"></div>
+ ${l.length?`<table><thead><tr><th>Produto</th><th class="hidem">Categoria</th><th>Preço</th></tr></thead><tbody>
+ ${l.map(p=>`<tr class="cl" data-e="${p.id}"><td><div class="pn"><div class="thumb">${esc(p.nome[0]||'?').toUpperCase()}</div><div>${esc(p.nome)}${p.codigo?`<div class="mut">Cód. ${esc(p.codigo)}</div>`:''}</div></div></td><td class="hidem">${p.categoria?`<span class="tag">${esc(p.categoria)}</span>`:'<span class="mut">—</span>'}</td><td><b>${brl(p.preco)}</b></td></tr>`).join('')}
+ </tbody></table>`:`<div class="empty">${produtos.length?'Nenhum produto encontrado.':'Você ainda não cadastrou produtos.<br><br><button class="btn" onclick="go(\'form\')">Cadastrar o primeiro</button>'}</div>`}</div>
+ <p class="mut">${produtos.length} produto(s) cadastrado(s)</p>`;
+ $('novo').onclick=()=>go('form');
+ const fp=$('fp');fp.oninput=()=>{filtroP=fp.value;const pos=fp.selectionStart;vProdutos(a);const n=$('fp');n.focus();n.setSelectionRange(pos,pos)};
+ a.querySelectorAll('[data-e]').forEach(r=>r.onclick=()=>go('form',r.dataset.e));
+}
+function vForm(a){
+ const p=produtos.find(x=>x.id===editId)||{};
+ const cats=[...new Set(produtos.map(x=>x.categoria).filter(Boolean))];
+ a.innerHTML=`<span class="back" onclick="go('produtos')">← Produtos</span>
+ <div class="top"><h1>${editId?'Editar produto':'Adicionar produto'}</h1></div>
+ <div class="card"><h2>Nome e identificação</h2><p class="sub">Como o produto aparece na hora de anotar.</p>
+  <label>Nome do produto *</label><input id="fn" value="${esc(p.nome)}" placeholder="Ex: Refrigerante Cola 2L">
+  <div class="grid2"><div><label>Código <span class="mut">(opcional)</span></label><input id="fc" value="${esc(p.codigo)}" placeholder="Ex: 7891234"></div>
+  <div><label>Categoria <span class="mut">(opcional)</span></label><input id="fk" list="cats" value="${esc(p.categoria)}" placeholder="Ex: Bebidas"><datalist id="cats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div></div>
+ </div>
+ <div class="card"><h2>Preço</h2><p class="sub">Valor cobrado por unidade.</p>
+  <label>Preço de venda *</label><div class="pfx"><span>R$</span><input id="fv" inputmode="decimal" value="${p.preco!=null?String(p.preco.toFixed(2)).replace('.',','):''}" placeholder="0,00"></div>
+ </div>
+ <div class="bar">${editId?'<button class="btn sec" id="del" style="color:var(--bad);margin-right:auto">Excluir</button>':''}<button class="btn sec" onclick="go('produtos')">Cancelar</button><button class="btn" id="sv">Salvar</button></div>`;
+ $('fn').focus();
+ $('sv').onclick=async()=>{
+  const nome=$('fn').value.trim(),preco=num($('fv').value);
+  if(!nome){toast('Informe o nome');return} if(!(preco>=0)){toast('Informe um preço válido');return}
+  const d={nome,preco,codigo:$('fc').value.trim(),categoria:$('fk').value.trim()};
+  $('sv').disabled=true;
+  try{editId?await db.doc('produtos/'+editId).set(d):await db.collection('produtos').add(d);toast('Produto salvo');go('produtos')}
+  catch(e){$('sv').disabled=false;toast('Erro ao salvar')}
+ };
+ if(editId)$('del').onclick=async()=>{if(!confirm('Excluir "'+p.nome+'"?'))return;await db.doc('produtos/'+editId).delete();toast('Produto excluído');go('produtos')};
+}
+
+/* ---------- NOVA ANOTAÇÃO ---------- */
+function vAnotar(a){
+ const nomes=[...new Set(contas.map(c=>c.cliente))].sort();
+ const t=carrinho.reduce((s,i)=>s+i.qtd*i.preco,0);
+ a.innerHTML=`<div class="top"><h1>Nova anotação</h1></div>
+ <div class="card"><h2>Cliente</h2><input id="cl" list="cls" value="${esc(cliente)}" placeholder="Nome do cliente"><datalist id="cls">${nomes.map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>
+ <div class="card"><h2>Produtos</h2><p class="sub">Busque e toque no produto para adicionar.</p>
+  ${produtos.length?`<input id="bp" placeholder="🔍 Buscar produto" autocomplete="off"><div id="sug"></div>`:`<div class="empty">Nenhum produto cadastrado. <a href="#" onclick="go('form');return false">Cadastrar agora</a></div>`}
+  ${carrinho.length?`<table style="margin-top:12px"><thead><tr><th>Item</th><th>Qtd</th><th style="text-align:right">Subtotal</th><th></th></tr></thead><tbody>
+  ${carrinho.map((i,k)=>`<tr><td>${esc(i.nome)}<div class="mut">${brl(i.preco)} un.</div></td><td><div class="qty"><button data-m="${k}">−</button><span>${i.qtd}</span><button data-p="${k}">+</button></div></td><td style="text-align:right"><b>${brl(i.qtd*i.preco)}</b></td><td><button class="btn link" data-r="${k}">✕</button></td></tr>`).join('')}
+  </tbody></table><div class="sum"><span>Total</span><span>${brl(t)}</span></div>`:''}
+ </div>
+ <div class="bar">${carrinho.length?'<button class="btn sec" id="limpar">Limpar</button>':''}<button class="btn" id="salvar" ${carrinho.length?'':'disabled'}>Salvar anotação</button></div>`;
+ $('cl').oninput=e=>cliente=e.target.value;
+ const bp=$('bp');
+ if(bp){bp.oninput=()=>{const q=bp.value.toLowerCase().trim();const l=q?produtos.filter(p=>(p.nome+' '+(p.codigo||'')).toLowerCase().includes(q)).slice(0,8):[];
+  $('sug').className=l.length?'sug':'';$('sug').innerHTML=l.map(p=>`<div data-a="${p.id}"><span>${esc(p.nome)}</span><b>${brl(p.preco)}</b></div>`).join('');
+  $('sug').querySelectorAll('[data-a]').forEach(d=>d.onclick=()=>{const p=produtos.find(x=>x.id===d.dataset.a);const ex=carrinho.find(i=>i.pid===p.id);ex?ex.qtd++:carrinho.push({pid:p.id,nome:p.nome,preco:p.preco,qtd:1});vAnotar(a);$('bp').focus()})}}
+ a.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{carrinho[b.dataset.p].qtd++;vAnotar(a)});
+ a.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{const i=carrinho[b.dataset.m];i.qtd>1?i.qtd--:carrinho.splice(b.dataset.m,1);vAnotar(a)});
+ a.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{carrinho.splice(b.dataset.r,1);vAnotar(a)});
+ if($('limpar'))$('limpar').onclick=()=>{if(confirm('Limpar itens?')){carrinho=[];vAnotar(a)}};
+ $('salvar').onclick=async()=>{
+  const n=cliente.trim();if(!n){toast('Informe o cliente');$('cl').focus();return}
+  $('salvar').disabled=true;
+  try{await db.collection('contas').add({cliente:n,itens:carrinho.map(({nome,preco,qtd})=>({nome,preco,qtd})),data:Date.now(),pago:false});carrinho=[];cliente='';toast('Anotação salva ✓');vAnotar(a)}
+  catch(e){$('salvar').disabled=false;toast('Erro ao salvar')}
+ };
+}
+
+/* ---------- ANOTAÇÕES RECENTES ---------- */
+function vRecentes(a){
+ const l=[...contas].sort((x,y)=>y.data-x.data).slice(0,50);
+ a.innerHTML=`<div class="top"><h1>Anotações</h1><span class="mut">Últimas 50</span></div>
+ <div class="card tablewrap">${l.length?`<table><thead><tr><th>Cliente</th><th class="hidem">Itens</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
+ ${l.map(c=>`<tr><td><b>${esc(c.cliente)}</b><div class="mut">${dt(c.data)}</div></td><td class="hidem mut">${c.itens.map(i=>i.qtd+'× '+esc(i.nome)).join(', ')}</td><td><b>${brl(total(c))}</b></td><td><span class="tag ${c.pago?'ok':'dev'}">${c.pago?'Pago':'Devendo'}</span></td><td>${c.pago?'':`<button class="btn link" data-x="${c.id}" title="Excluir">✕</button>`}</td></tr>`).join('')}
+ </tbody></table>`:'<div class="empty">Nenhuma anotação ainda.</div>'}</div>`;
+ a.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('Excluir esta anotação? Use só se foi anotada por engano.'))await db.doc('contas/'+b.dataset.x).delete()});
+}
+
+/* ---------- INÍCIO ---------- */
+(()=>{
+ try{firebase.initializeApp(firebaseConfig);db=firebase.firestore()}catch(e){db=null}
+ go('anotar');
+ if(!db)return;
+ const busy=()=>document.activeElement&&['INPUT','SELECT'].includes(document.activeElement.tagName);
+ db.collection('produtos').orderBy('nome').onSnapshot(s=>{produtos=s.docs.map(d=>({id:d.id,...d.data()}));if(!busy()&&view!=='form')render()},e=>toast('Erro no banco: '+e.code));
+ db.collection('contas').onSnapshot(s=>{contas=s.docs.map(d=>({id:d.id,...d.data()}));if(view==='recentes')render()},()=>{});
+})();
+</script>
+</body></html>
