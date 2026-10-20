@@ -30,6 +30,17 @@ input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:
 .conta{padding:10px 0;border-top:1px dashed var(--line)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.st{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}.st b{display:block;font-size:18px}.st span{font-size:12px;color:var(--mut)}@media(max-width:420px){.st b{font-size:15px}}
 .msg{text-align:center;color:var(--mut);padding:30px 0}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:20;padding:16px}
+.ov.on{display:flex}@media(min-width:600px){.ov{align-items:center}}
+.modal{background:var(--card);border-radius:14px;padding:18px;width:100%;max-width:440px;max-height:85vh;overflow:auto}
+.modal h2{margin:0 0 4px;font-size:18px}
+.modal .li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.modal .big{font-size:22px;font-weight:800;text-align:right;margin:12px 0}
+.fp{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 14px}.fp label{margin:0;flex:1}
+.fp input{display:none}.fp span{display:block;text-align:center;padding:9px;border:1px solid var(--line);border-radius:9px;cursor:pointer;color:var(--ink);font-size:14px}
+.fp input:checked+span{background:var(--accs);border-color:var(--acc);color:var(--acc);font-weight:700}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink);margin:0 0 14px}.chk input{width:20px;height:20px}
+.acts{display:flex;gap:8px}.acts .btn{flex:1}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9px;display:none}
 </style>
 </head><body>
@@ -37,6 +48,14 @@ input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:
 <div class="stats" id="stats"></div><input id="busca" placeholder="🔍 Buscar cliente" style="margin-bottom:10px"><nav><button data-t="devendo" class="on">Devendo</button><button data-t="pagos">Pagos</button></nav></header>
 <main id="app"><div class="msg">Carregando…</div></main>
 <div id="toast"></div>
+<div class="ov" id="ov"><div class="modal">
+<h2>Confirmar pagamento</h2><div class="mut" id="mSub"></div>
+<div id="mItens" style="margin-top:10px"></div><div class="big" id="mTot"></div>
+<label>Forma de pagamento</label>
+<div class="fp"><label><input type="radio" name="fp" value="Dinheiro"><span>💵 Dinheiro</span></label><label><input type="radio" name="fp" value="Pix"><span>⚡ Pix</span></label><label><input type="radio" name="fp" value="Cartão"><span>💳 Cartão</span></label></div>
+<label class="chk"><input type="checkbox" id="mChk"> Confirmo que recebi este valor</label>
+<div class="acts"><button class="btn sec" id="mNo">Cancelar</button><button class="btn" id="mOk" disabled>Confirmar</button></div>
+</div></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
@@ -74,12 +93,32 @@ function render(){
   const ord=Object.entries(grupos).sort((x,y)=>pago?0:x[0].localeCompare(y[0]));
   const geral=lista.reduce((s,c)=>s+total(c),0);
   a.innerHTML=(pago?'':`<div class="card" style="display:flex;justify-content:space-between;align-items:center"><span>Total a receber</span><span class="badge">${brl(geral)}</span></div>`)+ord.map(([n,cs])=>`<div class="card"><div class="it" style="border:0;padding-top:0"><span class="cli">${esc(n)}</span><span class="badge ${pago?'ok':''}">${brl(cs.reduce((s,c)=>s+total(c),0))}</span></div>
-  ${cs.sort((x,y)=>y.data-x.data).map(c=>`<div class="conta"><div>${c.itens.map(i=>`${i.qtd}× ${esc(i.nome)} (${brl(i.preco)})`).join(', ')}</div><div class="it" style="border:0;padding-bottom:0"><span class="mut">${dt(c.data)}${pago&&c.pagoEm?' · pago em '+dt(c.pagoEm):''} · Total: <b>${brl(total(c))}</b></span>${pago?`<button class="btn del" data-u="${c.id}">Desfazer</button>`:`<button class="btn" data-p="${c.id}">Marcar pago</button>`}</div></div>`).join('')}
+  ${cs.sort((x,y)=>y.data-x.data).map(c=>`<div class="conta"><div>${c.itens.map(i=>`${i.qtd}× ${esc(i.nome)} (${brl(i.preco)})`).join(', ')}</div><div class="it" style="border:0;padding-bottom:0"><span class="mut">${dt(c.data)}${pago&&c.pagoEm?' · pago em '+dt(c.pagoEm)+(c.formaPagamento?' ('+esc(c.formaPagamento)+')':''):''} · Total: <b>${brl(total(c))}</b></span>${pago?`<button class="btn del" data-u="${c.id}">Desfazer</button>`:`<button class="btn" data-p="${c.id}">Marcar pago</button>`}</div></div>`).join('')}
   ${!pago&&cs.length>1?`<button class="btn sec" data-all="${esc(n)}" style="width:100%;margin-top:8px">Marcar tudo de ${esc(n)} como pago</button>`:''}</div>`).join('');
-  a.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await db.doc('contas/'+b.dataset.p).update({pago:true,pagoEm:Date.now()})}catch(e){b.disabled=false;toast('Sem permissão para alterar')}});
-  a.querySelectorAll('[data-u]').forEach(b=>b.onclick=async()=>{if(confirm('Voltar para devendo?'))await db.doc('contas/'+b.dataset.u).update({pago:false,pagoEm:null})});
-  a.querySelectorAll('[data-all]').forEach(b=>b.onclick=async()=>{if(!confirm('Marcar todas as contas de '+b.dataset.all+' como pagas?'))return;b.disabled=true;for(const c of grupos[b.dataset.all])await db.doc('contas/'+c.id).update({pago:true,pagoEm:Date.now()})});
+  a.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>confirmar([contas.find(c=>c.id===b.dataset.p)]));
+  a.querySelectorAll('[data-u]').forEach(b=>b.onclick=async()=>{if(confirm('Voltar para devendo?'))await db.doc('contas/'+b.dataset.u).update({pago:false,pagoEm:null,formaPagamento:null})});
+  a.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>confirmar(grupos[b.dataset.all]));
  }
+}
+function confirmar(lista){
+ const ov=document.getElementById('ov'),ok=document.getElementById('mOk'),chk=document.getElementById('mChk');
+ const tot=lista.reduce((s,c)=>s+total(c),0);
+ document.getElementById('mSub').textContent=lista[0].cliente+' · '+(lista.length>1?lista.length+' anotações':dt(lista[0].data));
+ document.getElementById('mItens').innerHTML=lista.map(c=>c.itens.map(i=>`<div class="li"><span>${i.qtd}× ${esc(i.nome)}${lista.length>1?' <span class="mut">('+dt(c.data)+')</span>':''}</span><span>${brl(i.qtd*i.preco)}</span></div>`).join('')).join('');
+ document.getElementById('mTot').textContent='Total: '+brl(tot);
+ document.querySelectorAll('input[name=fp]').forEach(r=>r.checked=false);
+ chk.checked=false;ok.disabled=true;ok.textContent='Confirmar';
+ const upd=()=>ok.disabled=!(chk.checked&&document.querySelector('input[name=fp]:checked'));
+ chk.onchange=upd;document.querySelectorAll('input[name=fp]').forEach(r=>r.onchange=upd);
+ const fechar=()=>ov.classList.remove('on');
+ document.getElementById('mNo').onclick=fechar;ov.onclick=e=>{if(e.target===ov)fechar()};
+ ok.onclick=async()=>{
+  const forma=document.querySelector('input[name=fp]:checked').value;
+  ok.disabled=true;ok.textContent='Salvando…';
+  try{for(const c of lista)await db.doc('contas/'+c.id).update({pago:true,pagoEm:Date.now(),formaPagamento:forma});fechar();toast('Pagamento registrado ✓')}
+  catch(e){ok.disabled=false;ok.textContent='Confirmar';toast('Erro ao salvar')}
+ };
+ ov.classList.add('on');
 }
 (async()=>{
  try{firebase.initializeApp(firebaseConfig);db=firebase.firestore()}catch(e){db=null}
