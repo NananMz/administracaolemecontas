@@ -41,11 +41,18 @@ input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:
 .fp input:checked+span{background:var(--accs);border-color:var(--acc);color:var(--acc);font-weight:700}
 .chk{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink);margin:0 0 14px}.chk input{width:20px;height:20px}
 .acts{display:flex;gap:8px}.acts .btn{flex:1}
+.chat{display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow:auto;padding:4px 2px 10px}
+.bub{max-width:80%;padding:9px 12px;border-radius:12px;background:var(--bg);border:1px solid var(--line);white-space:pre-wrap;word-wrap:break-word}
+.bub.eu{align-self:flex-end;background:var(--accs);border-color:transparent}
+.bub small{display:block;font-size:11px;color:var(--mut);margin-top:3px}
+.send{display:flex;gap:8px}.send textarea{flex:1;min-height:44px;max-height:120px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font:inherit;resize:vertical}
+.cnt{background:#d33;color:#fff;border-radius:20px;font-size:11px;padding:0 6px;margin-left:4px;font-weight:700}
+.av{background:var(--warns);color:var(--warn);padding:1px 7px;border-radius:6px;font-size:14px}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9px;display:none}
 </style>
 </head><body>
-<header><h1>📊 Caderneta — Administração</h1>
-<div class="stats" id="stats"></div><input id="busca" placeholder="🔍 Buscar cliente" style="margin-bottom:10px"><nav><button data-t="devendo" class="on">Devendo</button><button data-t="pagos">Pagos</button></nav></header>
+<header><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px"><h1 style="margin:0">📊 Caderneta — Administração</h1><button class="btn sec nbtn" onclick="pedirNotif()">🔕 Ativar notificações</button></div>
+<div class="stats" id="stats"></div><input id="busca" placeholder="🔍 Buscar cliente" style="margin-bottom:10px"><nav><button data-t="devendo" class="on">Devendo</button><button data-t="pagos">Pagos</button><button data-t="recados">💬 Recados<b class="cnt" id="rc" style="display:none"></b></button></nav></header>
 <main id="app"><div class="msg">Carregando…</div></main>
 <div id="toast"></div>
 <div class="ov" id="ov"><div class="modal">
@@ -72,9 +79,9 @@ const firebaseConfig = {
 const brl=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dt=ms=>new Date(ms).toLocaleDateString('pt-BR');
-let tab='devendo',busca='',db=null,produtos=[],contas=[],carrinho=[],cliente='';
+let recados=[],tab='devendo',busca='',db=null,produtos=[],contas=[],carrinho=[],cliente='';
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2200)}
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));render()});
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;document.getElementById('busca').style.display=tab==='recados'?'none':'';document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));render()});
 const total=c=>c.itens.reduce((s,i)=>s+i.qtd*i.preco,0);
 
 function stats(){
@@ -86,6 +93,11 @@ document.getElementById('busca').oninput=e=>{busca=e.target.value.toLowerCase().
 function render(){
  const a=document.getElementById('app');
  if(!db){a.innerHTML='<div class="msg">Não foi possível conectar ao banco de dados. Confira a configuração do Firebase no arquivo.</div>';return}
+ if(tab==='recados'){
+  a.innerHTML=`<div class="card"><div class="chat" id="chat"></div><div class="send"><textarea id="rt" placeholder="Responder…"></textarea><button class="btn" id="rs">Enviar</button></div></div>`;
+  listaRecados();
+  document.getElementById('rs').onclick=async()=>{const rt=document.getElementById('rt'),rs=document.getElementById('rs'),t=rt.value.trim();if(!t)return;rs.disabled=true;try{await db.collection('recados').add({de:'chefe',texto:t,data:Date.now(),lido:false});rt.value=''}catch(e){toast('Erro ao enviar')}rs.disabled=false;rt.focus()};
+  return}
 {
   const pago=tab==='pagos';const lista=contas.filter(c=>!!c.pago===pago&&c.cliente.toLowerCase().includes(busca));
   if(!lista.length){a.innerHTML=`<div class="msg">${pago?'Nenhuma conta paga ainda.':'Ninguém devendo 🎉'}</div>`;return}
@@ -93,7 +105,7 @@ function render(){
   const ord=Object.entries(grupos).sort((x,y)=>pago?0:x[0].localeCompare(y[0]));
   const geral=lista.reduce((s,c)=>s+total(c),0);
   a.innerHTML=(pago?'':`<div class="card" style="display:flex;justify-content:space-between;align-items:center"><span>Total a receber</span><span class="badge">${brl(geral)}</span></div>`)+ord.map(([n,cs])=>`<div class="card"><div class="it" style="border:0;padding-top:0"><span class="cli">${esc(n)}</span><span class="badge ${pago?'ok':''}">${brl(cs.reduce((s,c)=>s+total(c),0))}</span></div>
-  ${cs.sort((x,y)=>y.data-x.data).map(c=>`<div class="conta"><div>${c.itens.map(i=>`${i.qtd}× ${esc(i.nome)} (${brl(i.preco)})`).join(', ')}</div><div class="it" style="border:0;padding-bottom:0"><span class="mut">${dt(c.data)}${pago&&c.pagoEm?' · pago em '+dt(c.pagoEm)+(c.formaPagamento?' ('+esc(c.formaPagamento)+')':''):''} · Total: <b>${brl(total(c))}</b></span>${pago?`<button class="btn del" data-u="${c.id}">Desfazer</button>`:`<button class="btn" data-p="${c.id}">Marcar pago</button>`}</div></div>`).join('')}
+  ${cs.sort((x,y)=>y.data-x.data).map(c=>`<div class="conta"><div>${c.itens.map(i=>i.avulso?`<span class="av">✏️ ${esc(i.nome)}: ${brl(i.preco)}</span>`:`${i.qtd}× ${esc(i.nome)} (${brl(i.preco)})`).join(', ')}</div><div class="it" style="border:0;padding-bottom:0"><span class="mut">${dt(c.data)}${pago&&c.pagoEm?' · pago em '+dt(c.pagoEm)+(c.formaPagamento?' ('+esc(c.formaPagamento)+')':''):''} · Total: <b>${brl(total(c))}</b></span>${pago?`<button class="btn del" data-u="${c.id}">Desfazer</button>`:`<button class="btn" data-p="${c.id}">Marcar pago</button>`}</div></div>`).join('')}
   ${!pago&&cs.length>1?`<button class="btn sec" data-all="${esc(n)}" style="width:100%;margin-top:8px">Marcar tudo de ${esc(n)} como pago</button>`:''}</div>`).join('');
   a.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>confirmar([contas.find(c=>c.id===b.dataset.p)]));
   a.querySelectorAll('[data-u]').forEach(b=>b.onclick=async()=>{if(confirm('Voltar para devendo?'))await db.doc('contas/'+b.dataset.u).update({pago:false,pagoEm:null,formaPagamento:null})});
@@ -104,7 +116,7 @@ function confirmar(lista){
  const ov=document.getElementById('ov'),ok=document.getElementById('mOk'),chk=document.getElementById('mChk');
  const tot=lista.reduce((s,c)=>s+total(c),0);
  document.getElementById('mSub').textContent=lista[0].cliente+' · '+(lista.length>1?lista.length+' anotações':dt(lista[0].data));
- document.getElementById('mItens').innerHTML=lista.map(c=>c.itens.map(i=>`<div class="li"><span>${i.qtd}× ${esc(i.nome)}${lista.length>1?' <span class="mut">('+dt(c.data)+')</span>':''}</span><span>${brl(i.qtd*i.preco)}</span></div>`).join('')).join('');
+ document.getElementById('mItens').innerHTML=lista.map(c=>c.itens.map(i=>`<div class="li"><span>${i.avulso?'✏️ ':i.qtd+'× '}${esc(i.nome)}${lista.length>1?' <span class="mut">('+dt(c.data)+')</span>':''}</span><span>${brl(i.qtd*i.preco)}</span></div>`).join('')).join('');
  document.getElementById('mTot').textContent='Total: '+brl(tot);
  document.querySelectorAll('input[name=fp]').forEach(r=>r.checked=false);
  chk.checked=false;ok.disabled=true;ok.textContent='Confirmar';
@@ -120,10 +132,30 @@ function confirmar(lista){
  };
  ov.classList.add('on');
 }
+function listaRecados(){
+ const c=document.getElementById('chat');
+ if(c&&tab==='recados'){c.innerHTML=recados.length?recados.map(r=>`<div class="bub ${r.de==='chefe'?'eu':''}">${esc(r.texto)}<small>${r.de==='chefe'?'Você':'Atendente'} · ${new Date(r.data).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}${r.de==='chefe'&&r.lido?' · ✓ lido':''}</small></div>`).join(''):'<div class="msg">Nenhum recado ainda.</div>';c.scrollTop=c.scrollHeight;
+  recados.filter(r=>r.de==='atendente'&&!r.lido).forEach(r=>db.doc('recados/'+r.id).update({lido:true}).catch(()=>{}))}
+ const n=recados.filter(r=>r.de==='atendente'&&!r.lido).length,b=document.getElementById('rc');b.textContent=n;b.style.display=n&&tab!=='recados'?'':'none';
+}
+let swReg=null;
+async function initNotif(){if('serviceWorker' in navigator){try{swReg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready}catch(e){}}updNotifBtn()}
+function notifOn(){return 'Notification' in window&&Notification.permission==='granted'}
+function updNotifBtn(){document.querySelectorAll('.nbtn').forEach(b=>{const on=notifOn();b.textContent=on?'🔔 Notificações ativas':'🔕 Ativar notificações';b.disabled=on})}
+async function pedirNotif(){if(!('Notification' in window)){toast('Este navegador não suporta notificações');return}const p=await Notification.requestPermission();updNotifBtn();if(p==='granted')notificar('Notificações ativadas ✓','Você será avisado por aqui.');else toast('Permissão negada. Libere nas configurações do navegador.')}
+function notificar(t,b){toast(t+(b?' — '+b:''));if(!notifOn())return;try{if(swReg)swReg.showNotification(t,{body:b,data:location.href});else new Notification(t,{body:b})}catch(e){}}
+
 (async()=>{
  try{firebase.initializeApp(firebaseConfig);db=firebase.firestore()}catch(e){db=null}
  if(!db){render();return}
- db.collection('contas').onSnapshot(s=>{contas=s.docs.map(d=>({id:d.id,...d.data()}));stats();render()},()=>{});
+ let c1=true,r1=true;
+ db.collection('contas').onSnapshot(s=>{
+  if(!c1)s.docChanges().forEach(ch=>{if(ch.type==='added'&&!ch.doc.metadata.hasPendingWrites){const d=ch.doc.data();notificar('🧾 Nova anotação (devendo)',d.cliente+' — '+brl(total(d)))}});
+  c1=false;contas=s.docs.map(d=>({id:d.id,...d.data()}));stats();if(tab!=='recados')render()},()=>{});
+ db.collection('recados').orderBy('data').onSnapshot(s=>{
+  if(!r1)s.docChanges().forEach(ch=>{const d=ch.doc.data();if(ch.type==='added'&&d.de==='atendente')notificar('💬 Novo recado',d.texto)});
+  r1=false;recados=s.docs.map(d=>({id:d.id,...d.data()}));listaRecados()},()=>{});
+ initNotif();
  render();
 })();
 </script>
