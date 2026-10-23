@@ -49,6 +49,12 @@ tbody tr.cl{cursor:pointer}tbody tr.cl:hover{background:var(--bg)}
 .sug div:last-child{border:0}.sug div:hover{background:var(--pris)}
 .sum{display:flex;justify-content:space-between;align-items:center;font-size:20px;font-weight:800;padding-top:14px;margin-top:6px;border-top:1px solid var(--line)}
 .bar{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;padding:12px 0}
+.chat{display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow:auto;padding:4px 2px 10px}
+.bub{max-width:80%;padding:9px 12px;border-radius:12px;background:var(--bg);border:1px solid var(--line);white-space:pre-wrap;word-wrap:break-word}
+.bub.eu{align-self:flex-end;background:var(--pris);border-color:transparent}
+.bub small{display:block;font-size:11px;color:var(--mut);margin-top:3px}
+.send{display:flex;gap:8px}.send textarea{flex:1;min-height:44px;max-height:120px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font:inherit;resize:vertical}
+.cnt{background:#d33;color:#fff;border-radius:20px;font-size:11px;padding:0 6px;margin-left:4px;font-weight:700}
 #toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;display:none;z-index:9}
 .hidem{}
 @media(max-width:760px){
@@ -64,7 +70,8 @@ tbody tr.cl{cursor:pointer}tbody tr.cl:hover{background:var(--bg)}
 <a data-v="anotar"><span>🧾</span>Nova anotação</a>
 <a data-v="produtos"><span>📦</span>Produtos</a>
 <a data-v="recentes"><span>🕘</span>Anotações</a>
-</nav></aside>
+<a data-v="recados"><span>💬</span>Recados<b class="cnt" id="rc" style="display:none"></b></a>
+</nav><button class="btn sec nbtn hidem" style="width:100%;margin-top:14px" onclick="pedirNotif()">🔕 Ativar notificações</button></aside>
 <main id="app"><div class="empty">Carregando…</div></main>
 </div>
 <div id="toast"></div>
@@ -87,16 +94,16 @@ const dt=ms=>new Date(ms).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',
 const num=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'));
 const $=id=>document.getElementById(id);
 function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2300)}
-let db=null,produtos=[],contas=[],view='anotar',editId=null,carrinho=[],cliente='',filtroP='';
+let db=null,recados=[],produtos=[],contas=[],view='anotar',editId=null,carrinho=[],cliente='',filtroP='';
 const total=c=>c.itens.reduce((s,i)=>s+i.qtd*i.preco,0);
 
 document.querySelectorAll('.menu a').forEach(a=>a.onclick=()=>go(a.dataset.v));
-function go(v,id){view=v;editId=id||null;document.querySelectorAll('.menu a').forEach(a=>a.classList.toggle('on',a.dataset.v===(v==='form'?'produtos':v)));render();scrollTo(0,0)}
+function go(v,id){view=v;if(typeof listaRecados==='function'&&recados)setTimeout(listaRecados);editId=id||null;document.querySelectorAll('.menu a').forEach(a=>a.classList.toggle('on',a.dataset.v===(v==='form'?'produtos':v)));render();scrollTo(0,0)}
 
 function render(){
  const a=$('app');
  if(!db){a.innerHTML='<div class="empty">Não foi possível conectar ao banco. Confira a configuração do Firebase.</div>';return}
- ({anotar:vAnotar,produtos:vProdutos,form:vForm,recentes:vRecentes})[view](a);
+ ({anotar:vAnotar,produtos:vProdutos,form:vForm,recentes:vRecentes,recados:vRecados})[view](a);
 }
 
 /* ---------- PRODUTOS ---------- */
@@ -147,6 +154,8 @@ function vAnotar(a){
  <div class="card"><h2>Cliente</h2><input id="cl" list="cls" value="${esc(cliente)}" placeholder="Nome do cliente"><datalist id="cls">${nomes.map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>
  <div class="card"><h2>Produtos</h2><p class="sub">Busque e toque no produto para adicionar.</p>
   ${produtos.length?`<input id="bp" placeholder="🔍 Buscar produto" autocomplete="off"><div id="sug"></div>`:`<div class="empty">Nenhum produto cadastrado. <a href="#" onclick="go('form');return false">Cadastrar agora</a></div>`}
+  <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:4px"><label>Ou adicione um valor avulso</label>
+  <div class="grid2" style="grid-template-columns:1fr 130px auto;align-items:center"><input id="ad" placeholder="Descrição (opcional)"><div class="pfx"><span>R$</span><input id="av" inputmode="decimal" placeholder="0,00"></div><button class="btn sec" id="aadd">+ Adicionar</button></div></div>
   ${carrinho.length?`<table style="margin-top:12px"><thead><tr><th>Item</th><th>Qtd</th><th style="text-align:right">Subtotal</th><th></th></tr></thead><tbody>
   ${carrinho.map((i,k)=>`<tr><td>${esc(i.nome)}<div class="mut">${brl(i.preco)} un.</div></td><td><div class="qty"><button data-m="${k}">−</button><span>${i.qtd}</span><button data-p="${k}">+</button></div></td><td style="text-align:right"><b>${brl(i.qtd*i.preco)}</b></td><td><button class="btn link" data-r="${k}">✕</button></td></tr>`).join('')}
   </tbody></table><div class="sum"><span>Total</span><span>${brl(t)}</span></div>`:''}
@@ -157,6 +166,8 @@ function vAnotar(a){
  if(bp){bp.oninput=()=>{const q=bp.value.toLowerCase().trim();const l=q?produtos.filter(p=>(p.nome+' '+(p.codigo||'')).toLowerCase().includes(q)).slice(0,8):[];
   $('sug').className=l.length?'sug':'';$('sug').innerHTML=l.map(p=>`<div data-a="${p.id}"><span>${esc(p.nome)}</span><b>${brl(p.preco)}</b></div>`).join('');
   $('sug').querySelectorAll('[data-a]').forEach(d=>d.onclick=()=>{const p=produtos.find(x=>x.id===d.dataset.a);const ex=carrinho.find(i=>i.pid===p.id);ex?ex.qtd++:carrinho.push({pid:p.id,nome:p.nome,preco:p.preco,qtd:1});vAnotar(a);$('bp').focus()})}}
+ const addAv=()=>{const v=num($('av').value);if(!(v>0)){toast('Informe um valor');$('av').focus();return}carrinho.push({pid:null,nome:$('ad').value.trim()||'Valor avulso',preco:v,qtd:1});vAnotar(a);$('av').focus()};
+ $('aadd').onclick=addAv;$('av').onkeydown=e=>{if(e.key==='Enter')addAv()};
  a.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{carrinho[b.dataset.p].qtd++;vAnotar(a)});
  a.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{const i=carrinho[b.dataset.m];i.qtd>1?i.qtd--:carrinho.splice(b.dataset.m,1);vAnotar(a)});
  a.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{carrinho.splice(b.dataset.r,1);vAnotar(a)});
@@ -164,7 +175,7 @@ function vAnotar(a){
  $('salvar').onclick=async()=>{
   const n=cliente.trim();if(!n){toast('Informe o cliente');$('cl').focus();return}
   $('salvar').disabled=true;
-  try{await db.collection('contas').add({cliente:n,itens:carrinho.map(({nome,preco,qtd})=>({nome,preco,qtd})),data:Date.now(),pago:false});carrinho=[];cliente='';toast('Anotação salva ✓');vAnotar(a)}
+  try{await db.collection('contas').add({cliente:n,itens:carrinho.map(({pid,nome,preco,qtd})=>pid?{nome,preco,qtd}:{nome,preco,qtd,avulso:true}),data:Date.now(),pago:false});carrinho=[];cliente='';toast('Anotação salva ✓');vAnotar(a)}
   catch(e){$('salvar').disabled=false;toast('Erro ao salvar')}
  };
 }
@@ -174,10 +185,33 @@ function vRecentes(a){
  const l=[...contas].sort((x,y)=>y.data-x.data).slice(0,50);
  a.innerHTML=`<div class="top"><h1>Anotações</h1><span class="mut">Últimas 50</span></div>
  <div class="card tablewrap">${l.length?`<table><thead><tr><th>Cliente</th><th class="hidem">Itens</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
- ${l.map(c=>`<tr><td><b>${esc(c.cliente)}</b><div class="mut">${dt(c.data)}</div></td><td class="hidem mut">${c.itens.map(i=>i.qtd+'× '+esc(i.nome)).join(', ')}</td><td><b>${brl(total(c))}</b></td><td><span class="tag ${c.pago?'ok':'dev'}">${c.pago?'Pago':'Devendo'}</span></td><td>${c.pago?'':`<button class="btn link" data-x="${c.id}" title="Excluir">✕</button>`}</td></tr>`).join('')}
+ ${l.map(c=>`<tr><td><b>${esc(c.cliente)}</b><div class="mut">${dt(c.data)}</div></td><td class="hidem mut">${c.itens.map(i=>i.avulso?esc(i.nome)+' '+brl(i.preco):i.qtd+'× '+esc(i.nome)).join(', ')}</td><td><b>${brl(total(c))}</b></td><td><span class="tag ${c.pago?'ok':'dev'}">${c.pago?'Pago':'Devendo'}</span></td><td>${c.pago?'':`<button class="btn link" data-x="${c.id}" title="Excluir">✕</button>`}</td></tr>`).join('')}
  </tbody></table>`:'<div class="empty">Nenhuma anotação ainda.</div>'}</div>`;
  a.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('Excluir esta anotação? Use só se foi anotada por engano.'))await db.doc('contas/'+b.dataset.x).delete()});
 }
+
+/* ---------- RECADOS ---------- */
+function vRecados(a){
+ a.innerHTML=`<div class="top"><h1>Recados</h1><button class="btn sec nbtn" onclick="pedirNotif()"></button></div>
+ <div class="card"><div class="chat" id="chat"></div>
+ <div class="send"><textarea id="rt" placeholder="Escreva um recado para a chefe…"></textarea><button class="btn" id="rs">Enviar</button></div></div>`;
+ updNotifBtn();listaRecados();
+ $('rs').onclick=async()=>{const t=$('rt').value.trim();if(!t)return;$('rs').disabled=true;try{await db.collection('recados').add({de:'atendente',texto:t,data:Date.now(),lido:false});$('rt').value=''}catch(e){toast('Erro ao enviar')}$('rs').disabled=false;$('rt').focus()};
+}
+function listaRecados(){
+ const c=$('chat');
+ if(c){c.innerHTML=recados.length?recados.map(r=>`<div class="bub ${r.de==='atendente'?'eu':''}">${esc(r.texto)}<small>${r.de==='atendente'?'Você':'Chefe'} · ${dt(r.data)}${r.de==='atendente'&&r.lido?' · ✓ lido':''}</small></div>`).join(''):'<div class="empty">Nenhum recado ainda.</div>';c.scrollTop=c.scrollHeight;
+  recados.filter(r=>r.de==='chefe'&&!r.lido).forEach(r=>db.doc('recados/'+r.id).update({lido:true}).catch(()=>{}))}
+ const n=recados.filter(r=>r.de==='chefe'&&!r.lido).length,b=$('rc');b.textContent=n;b.style.display=n&&view!=='recados'?'':'none';
+}
+
+/* ---------- NOTIFICAÇÕES ---------- */
+let swReg=null;
+async function initNotif(){if('serviceWorker' in navigator){try{swReg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready}catch(e){}}updNotifBtn()}
+function notifOn(){return 'Notification' in window&&Notification.permission==='granted'}
+function updNotifBtn(){document.querySelectorAll('.nbtn').forEach(b=>{const on=notifOn();b.textContent=on?'🔔 Notificações ativas':'🔕 Ativar notificações';b.disabled=on})}
+async function pedirNotif(){if(!('Notification' in window)){toast('Este navegador não suporta notificações');return}const p=await Notification.requestPermission();updNotifBtn();if(p==='granted')notificar('Notificações ativadas ✓','Você será avisado por aqui.');else toast('Permissão negada. Libere nas configurações do navegador.')}
+function notificar(t,b){toast(t+(b?' — '+b:''));if(!notifOn())return;try{if(swReg)swReg.showNotification(t,{body:b,data:location.href});else new Notification(t,{body:b})}catch(e){}}
 
 /* ---------- INÍCIO ---------- */
 (()=>{
@@ -186,7 +220,16 @@ function vRecentes(a){
  if(!db)return;
  const busy=()=>document.activeElement&&['INPUT','SELECT'].includes(document.activeElement.tagName);
  db.collection('produtos').orderBy('nome').onSnapshot(s=>{produtos=s.docs.map(d=>({id:d.id,...d.data()}));if(!busy()&&view!=='form')render()},e=>toast('Erro no banco: '+e.code));
- db.collection('contas').onSnapshot(s=>{contas=s.docs.map(d=>({id:d.id,...d.data()}));if(view==='recentes')render()},()=>{});
+ let c1=true,r1=true;
+ db.collection('contas').onSnapshot(s=>{
+  if(!c1)s.docChanges().forEach(ch=>{if(ch.type!=='modified')return;const d=ch.doc.data(),o=contas.find(c=>c.id===ch.doc.id);if(!o)return;
+   if(d.pago&&!o.pago)notificar('💰 Pagamento confirmado',d.cliente+' pagou '+brl(total(d))+(d.formaPagamento?' ('+d.formaPagamento+')':''));
+   if(!d.pago&&o.pago)notificar('↩️ Voltou para devendo',d.cliente+' — '+brl(total(d)))});
+  c1=false;contas=s.docs.map(d=>({id:d.id,...d.data()}));if(view==='recentes')render()},()=>{});
+ db.collection('recados').orderBy('data').onSnapshot(s=>{
+  if(!r1)s.docChanges().forEach(ch=>{const d=ch.doc.data();if(ch.type==='added'&&d.de==='chefe')notificar('💬 Recado da chefe',d.texto)});
+  r1=false;recados=s.docs.map(d=>({id:d.id,...d.data()}));listaRecados()},()=>{});
+ initNotif();
 })();
 </script>
 </body></html>
