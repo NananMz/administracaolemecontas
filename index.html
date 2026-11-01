@@ -69,6 +69,7 @@ tbody tr.cl{cursor:pointer}tbody tr.cl:hover{background:var(--bg)}
 <nav class="menu">
 <a data-v="anotar"><span>🧾</span>Nova anotação</a>
 <a data-v="produtos"><span>📦</span>Produtos</a>
+<a data-v="clientes"><span>👤</span>Clientes</a>
 <a data-v="recentes"><span>🕘</span>Anotações</a>
 <a data-v="recados"><span>💬</span>Recados<b class="cnt" id="rc" style="display:none"></b></a>
 </nav><button class="btn sec nbtn hidem" style="width:100%;margin-top:14px" onclick="pedirNotif()">🔕 Ativar notificações</button></aside>
@@ -94,16 +95,16 @@ const dt=ms=>new Date(ms).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',
 const num=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'));
 const $=id=>document.getElementById(id);
 function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2300)}
-let db=null,recados=[],produtos=[],contas=[],view='anotar',editId=null,carrinho=[],cliente='',filtroP='';
+let db=null,clientes=[],cliId=null,filtroC='',recados=[],produtos=[],contas=[],view='anotar',editId=null,carrinho=[],cliente='',filtroP='';
 const total=c=>c.itens.reduce((s,i)=>s+i.qtd*i.preco,0);
 
 document.querySelectorAll('.menu a').forEach(a=>a.onclick=()=>go(a.dataset.v));
-function go(v,id){view=v;if(typeof listaRecados==='function'&&recados)setTimeout(listaRecados);editId=id||null;document.querySelectorAll('.menu a').forEach(a=>a.classList.toggle('on',a.dataset.v===(v==='form'?'produtos':v)));render();scrollTo(0,0)}
+function go(v,id){view=v;cliId=v==='cform'?id:null;if(typeof listaRecados==='function'&&recados)setTimeout(listaRecados);editId=id||null;document.querySelectorAll('.menu a').forEach(a=>a.classList.toggle('on',a.dataset.v===(v==='form'?'produtos':v==='cform'?'clientes':v)));render();scrollTo(0,0)}
 
 function render(){
  const a=$('app');
  if(!db){a.innerHTML='<div class="empty">Não foi possível conectar ao banco. Confira a configuração do Firebase.</div>';return}
- ({anotar:vAnotar,produtos:vProdutos,form:vForm,recentes:vRecentes,recados:vRecados})[view](a);
+ ({anotar:vAnotar,produtos:vProdutos,form:vForm,recentes:vRecentes,recados:vRecados,clientes:vClientes,cform:vCForm})[view](a);
 }
 
 /* ---------- PRODUTOS ---------- */
@@ -148,7 +149,7 @@ function vForm(a){
 
 /* ---------- NOVA ANOTAÇÃO ---------- */
 function vAnotar(a){
- const nomes=[...new Set(contas.map(c=>c.cliente))].sort();
+ const nomes=listaClientes().map(c=>c.nome);
  const t=carrinho.reduce((s,i)=>s+i.qtd*i.preco,0);
  a.innerHTML=`<div class="top"><h1>Nova anotação</h1></div>
  <div class="card"><h2>Cliente</h2><input id="cl" list="cls" value="${esc(cliente)}" placeholder="Nome do cliente"><datalist id="cls">${nomes.map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>
@@ -175,8 +176,62 @@ function vAnotar(a){
  $('salvar').onclick=async()=>{
   const n=cliente.trim();if(!n){toast('Informe o cliente');$('cl').focus();return}
   $('salvar').disabled=true;
-  try{await db.collection('contas').add({cliente:n,itens:carrinho.map(({pid,nome,preco,qtd})=>pid?{nome,preco,qtd}:{nome,preco,qtd,avulso:true}),data:Date.now(),pago:false});carrinho=[];cliente='';toast('Anotação salva ✓');vAnotar(a)}
+  try{const cid=await garantirCliente(n);const nomeOk=(clientes.find(x=>x.id===cid)||{}).nome||n;await db.collection('contas').add({cliente:nomeOk,clienteId:cid,itens:carrinho.map(({pid,nome,preco,qtd})=>pid?{nome,preco,qtd}:{nome,preco,qtd,avulso:true}),data:Date.now(),pago:false});carrinho=[];cliente='';toast('Anotação salva ✓');vAnotar(a)}
   catch(e){$('salvar').disabled=false;toast('Erro ao salvar')}
+ };
+}
+
+/* ---------- CLIENTES ---------- */
+const norm=s=>String(s||'').trim().toLowerCase();
+const contasDe=c=>contas.filter(x=>c.id&&x.clienteId===c.id||(!x.clienteId&&norm(x.cliente)===norm(c.nome)));
+function listaClientes(){
+ const l=clientes.map(c=>({...c}));
+ contas.forEach(x=>{if(!x.clienteId&&!l.some(c=>norm(c.nome)===norm(x.cliente)))l.push({id:null,nome:x.cliente})});
+ return l.sort((a,b)=>a.nome.localeCompare(b.nome));
+}
+async function garantirCliente(nome){
+ const ex=clientes.find(c=>norm(c.nome)===norm(nome));
+ if(ex)return ex.id;
+ const r=await db.collection('clientes').add({nome:nome.trim(),telefone:'',obs:'',criado:Date.now()});return r.id;
+}
+function vClientes(a){
+ const f=norm(filtroC),l=listaClientes().filter(c=>norm(c.nome+' '+(c.telefone||'')).includes(f));
+ a.innerHTML=`<div class="top"><h1>Clientes</h1><button class="btn" id="ncli">+ Novo cliente</button></div>
+ <div class="card tablewrap"><div class="toolbar"><input id="fcl" placeholder="🔍 Buscar por nome ou telefone" value="${esc(filtroC)}"></div>
+ ${l.length?`<table><thead><tr><th>Cliente</th><th class="hidem">Telefone</th><th>Devendo</th></tr></thead><tbody>
+ ${l.map((c,k)=>{const cs=contasDe(c),dev=cs.filter(x=>!x.pago).reduce((s,x)=>s+total(x),0);return `<tr class="cl" data-k="${k}"><td><div class="pn"><div class="thumb">${esc((c.nome[0]||'?').toUpperCase())}</div><div>${esc(c.nome)}<div class="mut">${cs.length} anotação(ões)${c.id?'':' · sem perfil'}</div></div></div></td><td class="hidem">${esc(c.telefone)||'<span class="mut">—</span>'}</td><td>${dev?`<span class="tag dev">${brl(dev)}</span>`:'<span class="tag ok">Em dia</span>'}</td></tr>`}).join('')}
+ </tbody></table>`:'<div class="empty">Nenhum cliente ainda.</div>'}</div>`;
+ $('ncli').onclick=()=>go('cform','new');
+ const fc=$('fcl');fc.oninput=()=>{filtroC=fc.value;const p=fc.selectionStart;vClientes(a);const n=$('fcl');n.focus();n.setSelectionRange(p,p)};
+ a.querySelectorAll('[data-k]').forEach(r=>r.onclick=()=>{const c=l[r.dataset.k];go('cform',c.id||('nome:'+c.nome))});
+}
+function vCForm(a){
+ const novo=cliId==='new',soNome=String(cliId).startsWith('nome:');
+ const c=novo?{nome:''}:soNome?{id:null,nome:cliId.slice(5)}:(clientes.find(x=>x.id===cliId)||{nome:''});
+ const cs=novo?[]:contasDe(c).sort((x,y)=>y.data-x.data),dev=cs.filter(x=>!x.pago).reduce((s,x)=>s+total(x),0);
+ a.innerHTML=`<span class="back" onclick="go('clientes')">← Clientes</span>
+ <div class="top"><h1>${novo?'Novo cliente':esc(c.nome)}</h1>${novo?'':`<span class="tag ${dev?'dev':'ok'}" style="font-size:14px">${dev?'Devendo '+brl(dev):'Em dia'}</span>`}</div>
+ <div class="card"><h2>Dados do cliente</h2><p class="sub">Ao mudar o nome, todas as anotações dele são atualizadas, inclusive na página da chefe.</p>
+  <label>Nome *</label><input id="cn" value="${esc(c.nome)}">
+  <div class="grid2"><div><label>Telefone <span class="mut">(opcional)</span></label><input id="ct" inputmode="tel" value="${esc(c.telefone)}" placeholder="(00) 00000-0000"></div>
+  <div><label>Observação <span class="mut">(opcional)</span></label><input id="co" value="${esc(c.obs)}" placeholder="Ex: paga todo dia 10"></div></div>
+ </div>
+ ${novo?'':`<div class="card tablewrap"><div class="toolbar"><b>Histórico</b> <span class="mut">(${cs.length})</span></div>${cs.length?`<table><tbody>${cs.map(x=>`<tr><td><div class="mut">${dt(x.data)}</div>${x.itens.map(i=>i.avulso?esc(i.nome)+' '+brl(i.preco):i.qtd+'× '+esc(i.nome)).join(', ')}</td><td><b>${brl(total(x))}</b></td><td><span class="tag ${x.pago?'ok':'dev'}">${x.pago?'Pago':'Devendo'}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Sem anotações.</div>'}</div>`}
+ <div class="bar"><button class="btn sec" onclick="go('clientes')">Cancelar</button><button class="btn" id="csv">Salvar</button></div>`;
+ $('csv').onclick=async()=>{
+  const nome=$('cn').value.trim();if(!nome){toast('Informe o nome');return}
+  const outro=clientes.find(x=>norm(x.nome)===norm(nome)&&x.id!==c.id);
+  if(outro){toast('Já existe um cliente com esse nome');return}
+  const d={nome,telefone:$('ct').value.trim(),obs:$('co').value.trim()};
+  $('csv').disabled=true;$('csv').textContent='Salvando…';
+  try{
+   let id=c.id;
+   if(id)await db.doc('clientes/'+id).update(d);else{const r=await db.collection('clientes').add({...d,criado:Date.now()});id=r.id}
+   const b=db.batch();let n=0;
+   cs.forEach(x=>{if(x.cliente!==nome||x.clienteId!==id){b.update(db.doc('contas/'+x.id),{cliente:nome,clienteId:id});n++}});
+   if(n)await b.commit();
+   toast('Cliente salvo ✓'+(n?' · '+n+' anotação(ões) atualizada(s)':''));go('clientes');
+  }catch(e){$('csv').disabled=false;$('csv').textContent='Salvar';toast('Erro ao salvar')}
  };
 }
 
@@ -220,12 +275,13 @@ function notificar(t,b){toast(t+(b?' — '+b:''));if(!notifOn())return;try{if(sw
  if(!db)return;
  const busy=()=>document.activeElement&&['INPUT','SELECT'].includes(document.activeElement.tagName);
  db.collection('produtos').orderBy('nome').onSnapshot(s=>{produtos=s.docs.map(d=>({id:d.id,...d.data()}));if(!busy()&&view!=='form')render()},e=>toast('Erro no banco: '+e.code));
+ db.collection('clientes').onSnapshot(s=>{clientes=s.docs.map(d=>({id:d.id,...d.data()}));if((view==='clientes'||view==='cform')&&!busy())render()},()=>{});
  let c1=true,r1=true;
  db.collection('contas').onSnapshot(s=>{
   if(!c1)s.docChanges().forEach(ch=>{if(ch.type!=='modified')return;const d=ch.doc.data(),o=contas.find(c=>c.id===ch.doc.id);if(!o)return;
    if(d.pago&&!o.pago)notificar('💰 Pagamento confirmado',d.cliente+' pagou '+brl(total(d))+(d.formaPagamento?' ('+d.formaPagamento+')':''));
    if(!d.pago&&o.pago)notificar('↩️ Voltou para devendo',d.cliente+' — '+brl(total(d)))});
-  c1=false;contas=s.docs.map(d=>({id:d.id,...d.data()}));if(view==='recentes')render()},()=>{});
+  c1=false;contas=s.docs.map(d=>({id:d.id,...d.data()}));if((view==='recentes'||view==='clientes'||view==='cform')&&!busy())render()},()=>{});
  db.collection('recados').orderBy('data').onSnapshot(s=>{
   if(!r1)s.docChanges().forEach(ch=>{const d=ch.doc.data();if(ch.type==='added'&&d.de==='chefe')notificar('💬 Recado da chefe',d.texto)});
   r1=false;recados=s.docs.map(d=>({id:d.id,...d.data()}));listaRecados()},()=>{});
