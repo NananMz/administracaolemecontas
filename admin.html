@@ -48,12 +48,44 @@ input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:
 .send{display:flex;gap:8px}.send textarea{flex:1;min-height:44px;max-height:120px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font:inherit;resize:vertical}
 .cnt{background:#d33;color:#fff;border-radius:20px;font-size:11px;padding:0 6px;margin-left:4px;font-weight:700}
 .av{background:var(--warns);color:var(--warn);padding:1px 7px;border-radius:6px;font-size:14px}
+.modo{display:grid;grid-template-columns:1fr 1fr;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:12px;gap:4px}
+.modo button{border:0;background:none;color:var(--ink);padding:10px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}.modo button.on{background:var(--acc);color:#fff}
+body.modoE header{max-width:1150px}#est{max-width:1150px;margin:auto;padding:4px 16px 60px}
+.ealert{background:var(--warns);border:2px solid var(--warn);border-radius:12px;padding:12px;margin-bottom:14px}
+.eah{color:var(--warn);font-weight:800;font-size:17px;margin-bottom:8px}.eah span{font-weight:600;font-size:14px}
+.echips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.echip{display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--warn);border-radius:10px;padding:6px 10px 6px 6px;cursor:pointer;text-align:left;color:var(--ink);font:inherit;flex-shrink:0}
+.echip small{display:block;color:var(--warn);font-weight:700;font-size:12px}
+.mini{width:38px;height:38px;border-radius:8px;object-fit:cover}
+.eok{background:var(--accs);color:var(--acc);border-radius:12px;padding:12px;margin-bottom:14px;font-weight:600}
+.elay{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start}
+.ecats{position:sticky;top:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:2px}
+.ecat{display:flex;justify-content:space-between;align-items:center;gap:6px;border:0;background:none;color:var(--ink);padding:9px 10px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer;text-align:left}
+.ecat small{color:var(--mut);margin-left:4px}.ecat.on{background:var(--accs);color:var(--acc);font-weight:700}
+.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.ecard{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:box-shadow .15s}
+.ecard:hover{box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.ecard.s-zero,.ecard.s-baixo{border:2px solid var(--warn)}
+.ecapa{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--bg)}
+.semfoto{display:grid!important;place-items:center;background:var(--accs);color:var(--acc);font-weight:800;font-size:40px}
+.mini.semfoto{font-size:16px}.pcapa{width:100%;max-height:300px;aspect-ratio:1;object-fit:cover;border-radius:10px}
+.ebody{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;flex:1}
+.enome{font-size:14px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.epreco{font-size:20px;font-weight:700}.eqtd{font-size:13px}
+.etag{align-self:flex-start;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:4px}
+.t-zero,.t-baixo{background:var(--warn);color:#fff}.t-aten{background:#fff0cc;color:#8a5a00}.t-ok{background:var(--accs);color:var(--acc)}.t-na{background:var(--bg);color:var(--mut)}
+@media (prefers-color-scheme:dark){.t-aten{background:#3a2e12;color:#f0c060}}
+@media(max-width:700px){.elay{grid-template-columns:1fr}.ecats{position:static;flex-direction:row;overflow-x:auto;padding:4px}.ecat{flex-shrink:0;background:var(--bg)}
+ .egrid{grid-template-columns:repeat(2,1fr);gap:8px}.epreco{font-size:17px}}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9px;display:none}
 </style>
 </head><body>
 <header><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px"><h1 style="margin:0">📊 Caderneta — Administração</h1><button class="btn sec nbtn" onclick="pedirNotif()">🔕 Ativar notificações</button></div>
-<div class="stats" id="stats"></div><input id="busca" placeholder="🔍 Buscar cliente" style="margin-bottom:10px"><nav><button data-t="devendo" class="on">Devendo</button><button data-t="pagos">Pagos</button><button data-t="recados">💬 Recados<b class="cnt" id="rc" style="display:none"></b></button></nav></header>
+<div class="modo"><button data-m="contas" class="on">💰 Contas</button><button data-m="estoque">📦 Estoque <b class="cnt" id="ec" style="display:none"></b></button></div>
+<div id="hContas"><div class="stats" id="stats"></div><input id="busca" placeholder="🔍 Buscar cliente" style="margin-bottom:10px"><nav><button data-t="devendo" class="on">Devendo</button><button data-t="pagos">Pagos</button><button data-t="recados">💬 Recados<b class="cnt" id="rc" style="display:none"></b></button></nav></div></header>
 <main id="app"><div class="msg">Carregando…</div></main>
+<main id="est" style="display:none"><div class="msg">Carregando…</div></main>
+<div class="ov" id="pov"><div class="modal" id="pBody"></div></div>
 <div id="toast"></div>
 <div class="ov" id="ov"><div class="modal">
 <h2>Confirmar pagamento</h2><div class="mut" id="mSub"></div>
@@ -132,6 +164,67 @@ function confirmar(lista){
  };
  ov.classList.add('on');
 }
+/* ---------- ESTOQUE (somente leitura) ---------- */
+const $$=id=>document.getElementById(id);
+const normE=s=>String(s||'').trim().toLowerCase();
+let modo='contas',catSel='Todas',buscaE='',estPronto=false,p1=true;
+function stEst(p){
+ if(p.qtd==null||p.qtd==='')return{k:'na',t:'Sem contagem',o:3};
+ const q=+p.qtd,m=+p.minimo||0;
+ if(q<=0)return{k:'zero',t:'Esgotado',o:0};
+ if(m>0&&q<=m)return{k:'baixo',t:'Fazer pedido',o:1};
+ if(m>0&&q<=m*1.5)return{k:'aten',t:'Acabando',o:2};
+ return{k:'ok',t:'Em estoque',o:4};
+}
+const qtdTxt=p=>p.qtd==null||p.qtd===''?'—':(+p.qtd)+' '+(p.unidade||'un');
+const capaE=(p,c)=>p.foto?`<img class="${c}" src="${p.foto}" alt="">`:`<div class="${c} semfoto">${esc((p.nome||'?')[0].toUpperCase())}</div>`;
+function setModo(m){
+ modo=m;document.body.classList.toggle('modoE',m==='estoque');
+ document.querySelectorAll('.modo button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+ $$('hContas').style.display=$$('app').style.display=m==='contas'?'':'none';
+ $$('est').style.display=m==='estoque'?'':'none';
+ if(m==='estoque')renderEst();scrollTo(0,0);
+}
+document.querySelectorAll('.modo button').forEach(b=>b.onclick=()=>setModo(b.dataset.m));
+function renderEst(){
+ const e=$$('est');
+ if(!estPronto){
+  e.innerHTML=`<div id="eAlert"></div><div class="elay"><aside class="ecats" id="eCats"></aside><div style="min-width:0">
+  <input id="eBusca" placeholder="🔍 Buscar produto" style="margin-bottom:12px"><div class="mut" id="eInfo" style="margin-bottom:8px"></div><div class="egrid" id="eGrid"></div></div></div>`;
+  $$('eBusca').oninput=ev=>{buscaE=normE(ev.target.value);renderEst()};estPronto=true;
+ }
+ const urg=produtos.filter(p=>stEst(p).o<=1).sort((a,b)=>stEst(a).o-stEst(b).o),acab=produtos.filter(p=>stEst(p).o===2);
+ $$('eAlert').innerHTML=urg.length?`<div class="ealert"><div class="eah">⚠️ ${urg.length} produto(s) precisam de pedido${acab.length?` <span>· ${acab.length} acabando</span>`:''}</div>
+  <div class="echips">${urg.map(p=>`<button class="echip" data-v="${p.id}">${capaE(p,'mini')}<span><b>${esc(p.nome)}</b><small>${stEst(p).o===0?'ESGOTADO':'Restam '+qtdTxt(p)+' · mín. '+p.minimo}</small></span></button>`).join('')}</div></div>`
+  :produtos.length?`<div class="eok">✅ Nenhum produto abaixo do mínimo${acab.length?` · ${acab.length} acabando`:''}</div>`:'';
+ const cats=['Todas',...new Set(produtos.map(p=>p.categoria||'Sem categoria'))].sort((a,b)=>a==='Todas'?-1:b==='Todas'?1:a.localeCompare(b));
+ if(!cats.includes(catSel))catSel='Todas';
+ $$('eCats').innerHTML=cats.map(c=>{const ps=c==='Todas'?produtos:produtos.filter(p=>(p.categoria||'Sem categoria')===c),u=ps.filter(p=>stEst(p).o<=1).length;
+  return `<button class="ecat ${c===catSel?'on':''}" data-c="${esc(c)}"><span>${esc(c)}</span><span>${u?`<b class="cnt">${u}</b>`:''}<small>${ps.length}</small></span></button>`}).join('');
+ const l=produtos.filter(p=>(catSel==='Todas'||(p.categoria||'Sem categoria')===catSel)&&normE(p.nome+' '+(p.codigo||'')).includes(buscaE))
+  .sort((a,b)=>stEst(a).o-stEst(b).o||a.nome.localeCompare(b.nome));
+ const ult=Math.max(0,...produtos.map(p=>p.estoqueEm||0));
+ $$('eInfo').textContent=l.length+' produto(s)'+(catSel!=='Todas'?' em '+catSel:'')+' · mais urgentes primeiro'+(ult?' · última contagem '+new Date(ult).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'');
+ $$('eGrid').innerHTML=l.length?l.map(p=>{const s=stEst(p);return `<div class="ecard s-${s.k}" data-v="${p.id}">${capaE(p,'ecapa')}<div class="ebody"><div class="enome">${esc(p.nome)}</div><div class="epreco">${brl(+p.preco||0)}</div>
+  <div class="eqtd">Estoque: <b>${qtdTxt(p)}</b>${p.minimo!=null?` <span class="mut">/ mín. ${p.minimo}</span>`:''}</div><span class="etag t-${s.k}">${s.t}</span></div></div>`}).join('')
+  :`<div class="msg" style="grid-column:1/-1">${produtos.length?'Nenhum produto encontrado.':'Nenhum produto cadastrado ainda.'}</div>`;
+ e.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{catSel=b.dataset.c;renderEst()});
+ e.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>verProd(b.dataset.v));
+ const n=produtos.filter(p=>stEst(p).o<=1).length,ec=$$('ec');ec.textContent=n;ec.style.display=n?'':'none';
+}
+function verProd(id){
+ const p=produtos.find(x=>x.id===id);if(!p)return;const s=stEst(p);
+ const lucro=p.custo>0&&p.preco?Math.round((p.preco-p.custo)/p.preco*100):null;
+ $$('pBody').innerHTML=`${capaE(p,'pcapa')}<h2 style="margin:12px 0 2px">${esc(p.nome)}</h2><div class="mut">${esc(p.categoria||'Sem categoria')}${p.codigo?' · Cód. '+esc(p.codigo):''}</div>
+ <div class="epreco" style="font-size:26px;margin:8px 0">${brl(+p.preco||0)}</div><span class="etag t-${s.k}">${s.t}</span>
+ <div style="margin-top:12px"><div class="li"><span>Em estoque</span><b>${qtdTxt(p)}</b></div><div class="li"><span>Estoque mínimo</span><b>${p.minimo??'—'}</b></div>
+ ${p.custo>0?`<div class="li"><span>Preço de custo</span><b>${brl(+p.custo)}</b></div><div class="li"><span>Margem</span><b>${lucro}%</b></div>`:''}
+ ${p.custo>0&&p.qtd>0?`<div class="li"><span>Valor em estoque (custo)</span><b>${brl(p.custo*p.qtd)}</b></div>`:''}
+ <div class="li"><span>Última contagem</span><b>${p.estoqueEm?new Date(p.estoqueEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}</b></div></div>
+ <button class="btn sec" style="width:100%;margin-top:14px" onclick="document.getElementById('pov').classList.remove('on')">Fechar</button>`;
+ const ov=$$('pov');ov.classList.add('on');ov.onclick=e=>{if(e.target===ov)ov.classList.remove('on')};
+}
+
 function listaRecados(){
  const c=document.getElementById('chat');
  if(c&&tab==='recados'){c.innerHTML=recados.length?recados.map(r=>`<div class="bub ${r.de==='chefe'?'eu':''}">${esc(r.texto)}<small>${r.de==='chefe'?'Você':'Atendente'} · ${new Date(r.data).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}${r.de==='chefe'&&r.lido?' · ✓ lido':''}</small></div>`).join(''):'<div class="msg">Nenhum recado ainda.</div>';c.scrollTop=c.scrollHeight;
@@ -155,6 +248,9 @@ function notificar(t,b){toast(t+(b?' — '+b:''));if(!notifOn())return;try{if(sw
  db.collection('recados').orderBy('data').onSnapshot(s=>{
   if(!r1)s.docChanges().forEach(ch=>{const d=ch.doc.data();if(ch.type==='added'&&d.de==='atendente')notificar('💬 Novo recado',d.texto)});
   r1=false;recados=s.docs.map(d=>({id:d.id,...d.data()}));listaRecados()},()=>{});
+ db.collection('produtos').onSnapshot(s=>{
+  if(!p1)s.docChanges().forEach(ch=>{if(ch.type!=='modified')return;const d=ch.doc.data(),o=produtos.find(p=>p.id===ch.doc.id);if(o&&stEst(o).o>1&&stEst(d).o<=1)notificar('📦 Fazer pedido',d.nome+(stEst(d).o===0?' — ESGOTADO':' — restam '+qtdTxt(d)))});
+  p1=false;produtos=s.docs.map(d=>({id:d.id,...d.data()}));renderEst()},()=>{});
  initNotif();
  render();
 })();
